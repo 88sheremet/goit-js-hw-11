@@ -25,6 +25,11 @@ let gallerySimpleLightbox = new SimpleLightbox('.gallery a', {
 });
 
 refs.btnLoad.style.display = 'none';
+refs.btnSearch.disabled = true;
+
+refs.inputFormElem.addEventListener('input', () =>{
+    refs.btnSearch.disabled = false; 
+})
 
 const pictureAPI = new PictureAPI();
 
