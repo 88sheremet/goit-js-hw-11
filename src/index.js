@@ -8,7 +8,6 @@ const { searchForm, gallery, loadMoreBtn, endCollectionText } = {
   searchForm: document.querySelector('.search-form'),
   gallery: document.querySelector('.gallery'),
   loadMoreBtn: document.querySelector('.load-more'),
-  endCollectionText: document.querySelector('.end-collection-text'),
 };
 
 
@@ -86,7 +85,7 @@ async function onSubmitSearchForm(e) {
       gallery.innerHTML = '';
       renderCardImage(response.hits);
       lightbox.refresh();
-      endCollectionText.classList.add('is-hidden');
+      // endCollectionText.classList.add('is-hidden');
 
       const { height: cardHeight } = document
         .querySelector('.gallery')
@@ -102,7 +101,7 @@ async function onSubmitSearchForm(e) {
       gallery.innerHTML = '';
       Notify.failure('Sorry, there are no images matching your search query. Please try again.');
       loadMoreBtn.classList.add('is-hidden');
-      endCollectionText.classList.add('is-hidden');
+      // endCollectionText.classList.add('is-hidden');
     }
   } catch (error) {
     console.log(error);
@@ -120,6 +119,6 @@ async function onClickLoadMoreBtn() {
 
   if (currentHits === response.totalHits) {
     loadMoreBtn.classList.add('is-hidden');
-    endCollectionText.classList.remove('is-hidden');
+    // endCollectionText.classList.remove('is-hidden');
   }
 }
