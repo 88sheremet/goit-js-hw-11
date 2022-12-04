@@ -1,92 +1,125 @@
-// import Notiflix from 'notiflix';
-// import SimpleLightbox from 'simplelightbox';
-// import 'simplelightbox/dist/simple-lightbox.min.css';
-
-// key pixabay: 31754006-f43a1b08b2cea32f92fc299f3
-
-import { PictureAPI } from './js/picturePpixabayAPI.js';
-import Notiflix from 'notiflix';
+import fetchImages from './js/picturePpixabayAPI.js';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
-import { renderPictures } from './js/renderPictures';
 
-const refs = {
-  formElem: document.querySelector('.search-form'),
-  inputFormElem: document.querySelector('.search-form-input'),
-  btnSearch: document.querySelector('.search-form-button'),
+
+const { searchForm, gallery, loadMoreBtn, endCollectionText } = {
+  searchForm: document.querySelector('.search-form'),
   gallery: document.querySelector('.gallery'),
-  btnLoad: document.querySelector('.load-more'),
-  gallery: document.querySelector('.gallery'),
+  loadMoreBtn: document.querySelector('.load-more'),
+  endCollectionText: document.querySelector('.end-collection-text'),
 };
 
-let gallerySimpleLightbox = new SimpleLightbox('.gallery a', {
+
+function renderCardImage(arr) {
+  const markup = arr.map(
+    ({
+      largeImageURL,
+      webformatURL,
+      tags,
+      likes,
+      views,
+      comments,
+      downloads,
+    }) => `<div class="photo-card">
+              <a class="gallery-item" href="${largeImageURL}"><img class="photo" src="${webformatURL}" alt="${tags}" loading="lazy"/></a>
+              <div class="info">
+                  <p class="info-item">
+                      <b>Likes</b>
+                      <span class="info-item-api">${likes}</span>
+                  </p>
+                  <p class="info-item">
+                      <b>Views</b>
+                      <span class="info-item-api">${views}</span>
+                  </p>
+                  <p class="info-item">
+                      <b>Comments</b>
+                      <span class="info-item-api">${comments}</span>
+                  </p>
+                  <p class="info-item">
+                      <b>Downloads</b>
+                      <span class="info-item-api">${downloads}</span>
+                  </p>
+              </div>
+            </div>`
+  )
+  .join('');
+  gallery.insertAdjacentHTML('beforeend', markup);
+}
+
+let lightbox = new SimpleLightbox('.photo-card a', {
+  captions: true,
   captionsData: 'alt',
   captionDelay: 250,
 });
 
-refs.btnLoad.style.display = 'none';
-// refs.btnSearch.disabled = true;
+// loadMoreBtn.style.display = 'none';
 
-// refs.inputFormElem.addEventListener('input', () =>{
-//     refs.btnSearch.disabled = false; 
-// })
+let currentPage = 1;
+let currentHits = 0;
+let searchQuery = '';
 
-const pictureAPI = new PictureAPI();
+searchForm.addEventListener('submit', onSubmitSearchForm);
 
-refs.formElem.addEventListener('submit', searchPictures);
-refs.btnLoad.addEventListener('click', addPictures);
+async function onSubmitSearchForm(e) {
+  e.preventDefault();
+  searchQuery = e.currentTarget.searchQuery.value;
+  currentPage = 1;
 
-function searchPictures(event) {
-  event.preventDefault();
-  clearGallery();
-  pictureAPI.searchQuery =
-    event.currentTarget.elements.searchQuery.value.trim();
-  const inputValue = pictureAPI.searchQuery;
-  let amounItemsPage = pictureAPI.amountOfElements;
+  if (searchQuery === '') {
+    return;
+  }
 
-  pictureAPI.getPicture().then(data => {
-    refs.btnLoad.style.display = 'none';
+  const response = await fetchImages(searchQuery, currentPage);
+  currentHits = response.hits.length;
 
-    if (inputValue && data.hits.length) {
-      appendPicteureMarkup(data.hits);
-      Notiflix.Notify.success(`Hooray! We found ${data.totalHits} images.`);
-      refs.btnLoad.style.display = 'block';
-      if (data.hits.length < amounItemsPage) {
-        refs.btnLoad.style.display = 'none';
-      }
-      gallerySimpleLightbox.refresh();
-    } else if (inputValue === '') {
-      Notiflix.Notify.failure('Please enter a search term.');
-    } else {
-      Notiflix.Notify.failure(
-        'Sorry, there are no images matching your search query. Please try again.'
-      );
+  if (response.totalHits > 40) {
+    loadMoreBtn.classList.remove('is-hidden');
+  } else {
+    loadMoreBtn.classList.add('is-hidden');
+  }
+
+  try {
+    if (response.totalHits > 0) {
+      Notify.success(`Hooray! We found ${response.totalHits} images.`);
+      gallery.innerHTML = '';
+      renderCardImage(response.hits);
+      lightbox.refresh();
+      endCollectionText.classList.add('is-hidden');
+
+      const { height: cardHeight } = document
+        .querySelector('.gallery')
+        .firstElementChild.getBoundingClientRect();
+
+      window.scrollBy({
+        top: cardHeight * -100,
+        behavior: 'smooth',
+      });
     }
-  });
-}
 
-function addPictures() {
-  pictureAPI.getPicture().then(data => {
-    //console.log(data.hits);
-    appendPicteureMarkup(data.hits);
-    gallerySimpleLightbox.refresh();
-    if (+refs.gallery.children.length === +data.totalHits) {
-      console.log(data.totalHits);
-      refs.btnLoad.style.display = 'none';
-      Notiflix.Notify.info('These are the latest pictures for your request.');
-    } else {
-      Notiflix.Notify.success('More photos.');
+    if (response.totalHits === 0) {
+      gallery.innerHTML = '';
+      Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+      loadMoreBtn.classList.add('is-hidden');
+      endCollectionText.classList.add('is-hidden');
     }
-  });
+  } catch (error) {
+    console.log(error);
+  }
 }
 
-function appendPicteureMarkup(hits) {
-  console.log(hits);
-  refs.gallery.insertAdjacentHTML('beforeend', renderPictures(hits));
-}
+loadMoreBtn.addEventListener('click', onClickLoadMoreBtn);
 
-function clearGallery() {
-  refs.gallery.innerHTML = '';
-  pictureAPI.resetPage();
-  refs.btnLoad.style.display = 'none';
+async function onClickLoadMoreBtn() {
+  currentPage += 1;
+  const response = await fetchImages(searchQuery, currentPage);
+  renderCardImage(response.hits);
+  lightbox.refresh();
+  currentHits += response.hits.length;
+
+  if (currentHits === response.totalHits) {
+    loadMoreBtn.classList.add('is-hidden');
+    endCollectionText.classList.remove('is-hidden');
+  }
 }
