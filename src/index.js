@@ -1,4 +1,4 @@
-import fetchImages from './js/picturePpixabayAPI.js';
+import fetchImages from './js/fetchImages.js';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
